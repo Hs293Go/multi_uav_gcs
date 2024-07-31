@@ -1,0 +1,20 @@
+<library path="src">
+  <class name="Multi UAV GCS" type="rqt_multi_uav_gcs.module.MultiUAVGCSPlugin" base_class_type="rqt_gui_py::Plugin">
+    <description>
+      Simple GCS for multiple UAVs
+    </description>
+    <qtgui>
+      <!-- optional grouping...
+      <group>
+        <label>Group</label>
+      </group>
+      <group>
+        <label>Subgroup</label>
+      </group>
+      -->
+      <label>Multi UAV GCS</label>
+      <!-- <icon type="theme">system-help</icon> -->
+      <statustip>Simple GCS for multiple UAVs</statustip>
+    </qtgui>
+  </class>
+</library>
