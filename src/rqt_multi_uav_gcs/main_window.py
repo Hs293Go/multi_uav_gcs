@@ -417,9 +417,9 @@ class StatusLabel(QtWidgets.QLabel):
     def set_color(self, color):
         self.setStyleSheet(
             """
-QLabel {{
+QLabel {
     color: %s;
     border : 1px solid %s;
-}}"""
+}"""
             % (color, color)
         )
