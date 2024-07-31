@@ -7,4 +7,7 @@ catkin_package()
 
 catkin_python_setup()
 
+catkin_install_python(PROGRAMS scripts/rqt_multi_uav_gcs DESTINATION
+                      ${CATKIN_PACKAGE_BIN_DESTINATION})
+
 install(FILES plugin.xml DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
