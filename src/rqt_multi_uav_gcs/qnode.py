@@ -27,41 +27,41 @@ class VehicleNode(QtCore.QObject):
         self._prefix = prefix
 
         self._arming_client = rospy.ServiceProxy(
-            f"{self._prefix}/mavros/cmd/arming", CommandBool
+            "%s/mavros/cmd/arming" % self._prefix, CommandBool
         )
         self._set_mode_client = rospy.ServiceProxy(
-            f"{self._prefix}/mavros/set_mode", SetMode
+            "%s/mavros/set_mode" % self._prefix, SetMode
         )
         self._set_home_client = rospy.ServiceProxy(
-            f"{self._prefix}/mavros/set_home", CommandHome
+            "%s/mavros/set_home" % self._prefix, CommandHome
         )
         self._subs = {
             "imu": rospy.Subscriber(
-                f"{self._prefix}/mavros/imu/data", Imu, self._imu_cb, queue_size=1
+                "%s/mavros/imu/data" % self._prefix, Imu, self._imu_cb, queue_size=1
             ),
             "lla": rospy.Subscriber(
-                f"{self._prefix}/mavros/global_position/global",
+                "%s/mavros/global_position/global" % self._prefix,
                 NavSatFix,
                 self._lla_cb,
                 queue_size=1,
             ),
             "state": rospy.Subscriber(
-                f"{self._prefix}/mavros/state", State, self._state_cb, queue_size=1
+                "%s/mavros/state" % self._prefix, State, self._state_cb, queue_size=1
             ),
             "nsats": rospy.Subscriber(
-                f"{self._prefix}/mavros/global_position/raw/satellites",
+                "%s/mavros/global_position/raw/satellites" % self._prefix,
                 UInt32,
                 self._nsat_cb,
                 queue_size=1,
             ),
             "sp": rospy.Subscriber(
-                f"{self._prefix}/mavros/setpoint_raw/attitude",
+                "%s/mavros/setpoint_raw/attitude" % self._prefix,
                 AttitudeTarget,
                 self._setpoint_cb,
                 queue_size=1,
             ),
             "batt": rospy.Subscriber(
-                f"{self._prefix}/mavros/battery",
+                "%s/mavros/battery" % self._prefix,
                 BatteryState,
                 self._battery_cb,
                 queue_size=1,
@@ -85,7 +85,7 @@ class VehicleNode(QtCore.QObject):
                 self._subs.pop(it).unregister()
 
         self._subs["odom"] = rospy.Subscriber(
-            f"{self._prefix}{self._odom_topic}", Odometry, self._odom_cb
+            "%s%s" % (self._prefix, self._odom_topic), Odometry, self._odom_cb
         )
 
     def subscribe_local_position(self):
@@ -95,11 +95,11 @@ class VehicleNode(QtCore.QObject):
             self._subs.pop("odom").unregister()
 
         self._subs["enu"] = rospy.Subscriber(
-            f"{self._prefix}/mavros/local_position/pose", PoseStamped, self._pose_cb
+            "%s/mavros/local_position/pose" % self._prefix, PoseStamped, self._pose_cb
         )
 
         self._subs["vel"] = rospy.Subscriber(
-            f"{self._prefix}/mavros/local_position/velocity_local",
+            "%s/mavros/local_position/velocity_local" % self._prefix,
             TwistStamped,
             self._twist_cb,
         )
@@ -202,7 +202,7 @@ class QNode:
     def add_vehicle(self, name):
         name = str(name).strip().rstrip("/")
         if name and not name.startswith("/"):
-            name = f"/{name}"
+            name = "/%s" % name
         if name in self._vehicles:
             return None, None
         self._vehicles[name] = VehicleNode(name, self._odom_topic)

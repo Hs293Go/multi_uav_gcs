@@ -47,7 +47,7 @@ class MainWindow(QtWidgets.QWidget):
         if not name:
             pretty_title = "Main UAV"
         else:
-            pretty_title = f"Multi UAV: {name}"
+            pretty_title = "Multi UAV: %s" % name
         self._tabs.addTab(page, pretty_title)
 
     def remove_tab(self, idx):
@@ -131,14 +131,14 @@ class Page(QtWidgets.QWidget):
             digits=(4, 4, 7),
         )
         self._enu_box = ArrayDisplayGroupBox(
-            "Local Position ⤱", [f"{it} (m)" for it in "XYZ"]
+            "Local Position ⤱", ["%s (m)" % it for it in "XYZ"]
         )
         self._vel_box = ArrayDisplayGroupBox(
             "Local Velocity ⇶",
-            [f"v<sub>{it}</sub> (ms<sup>-1</sup>)" for it in "XYZ"],
+            ["v<sub>%s</sub> (ms<sup>-1</sup>)" % it for it in "XYZ"],
         )
         self._rpy_box = ArrayDisplayGroupBox(
-            "Orientation ⭯", [f"{it} (°)" for it in ("roll", "pitch", "yaw")]
+            "Orientation ⭯", ["%s (°)" % it for it in ("roll", "pitch", "yaw")]
         )
         layout.addWidget(self._lla_box, 1, 0, 1, 2)
         layout.addWidget(self._rpy_box, 1, 3, 1, 2)
@@ -218,11 +218,11 @@ class Page(QtWidgets.QWidget):
         self._sp_boxes = [
             ArrayDisplayGroupBox(
                 "Attitude Setpoint",
-                ["Thrust"] + [f"{it} (°)" for it in ["roll", "pitch", "yaw"]],
+                ["Thrust"] + ["%s (°)" % it for it in ["roll", "pitch", "yaw"]],
             ),
             ArrayDisplayGroupBox(
                 "Body Rates Setpoint",
-                ["Thrust"] + [f"ω<sub>{it}</sub>" for it in "XYZ"],
+                ["Thrust"] + ["ω<sub>%s</sub>" % it for it in "XYZ"],
             ),
         ]
         for it in self._sp_boxes:
@@ -311,7 +311,7 @@ class Page(QtWidgets.QWidget):
 
     def update_battery(self, percentage, voltage):
         self._battery_level.setValue(percentage * 100)
-        self._voltage_level.setText(f"Voltage : {voltage:.1f}")
+        self._voltage_level.setText("Voltage : %4.1f" % voltage)
 
     def update_setpoints(self, index, *values):
         self._setpoints.setCurrentIndex(index)
@@ -405,9 +405,10 @@ class StatusLabel(QtWidgets.QLabel):
 
     def set_color(self, color):
         self.setStyleSheet(
-            f"""
+            """
 QLabel {{
-    color: {color};
-    border : 1px solid {color};
+    color: %s;
+    border : 1px solid %s;
 }}"""
+            % (color, color)
         )
