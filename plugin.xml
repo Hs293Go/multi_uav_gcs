@@ -4,14 +4,9 @@
       Simple GCS for multiple UAVs
     </description>
     <qtgui>
-      <!-- optional grouping...
       <group>
-        <label>Group</label>
+        <label>Robot Tools</label>
       </group>
-      <group>
-        <label>Subgroup</label>
-      </group>
-      -->
       <label>Multi UAV GCS</label>
       <!-- <icon type="theme">system-help</icon> -->
       <statustip>Simple GCS for multiple UAVs</statustip>
