@@ -81,6 +81,7 @@ class Page(QtWidgets.QWidget):
     arming = QtCore.pyqtSignal(bool)
     set_mode = QtCore.pyqtSignal(str)
     update_odom_topic = QtCore.pyqtSignal(str)
+    send_refs = QtCore.pyqtSignal(float, float, float, float)
 
     def __init__(self, receiver):
         super().__init__()
@@ -89,11 +90,20 @@ class Page(QtWidgets.QWidget):
 
         self.setWindowTitle("multi_uav_gcs_window")
 
-        layout = QtWidgets.QGridLayout()
-        layout.addWidget(self.make_vehicle_state_groupbox(), 0, 0, 2, 1)
-        layout.addWidget(self.make_command_state_groupbox(), 0, 1, 1, 1)
-        layout.addWidget(self.make_control_groupbox(), 1, 1, 1, 1)
-        layout.addWidget(self.make_user_command_groupbox(), 2, 0, 1, 1)
+        layout = QtWidgets.QHBoxLayout()
+        lhs_frame = QtWidgets.QFrame()
+        lhs_layout = QtWidgets.QVBoxLayout()
+        lhs_layout.addWidget(self.make_vehicle_state_groupbox())
+        lhs_layout.addWidget(self.make_user_command_groupbox())
+        lhs_frame.setLayout(lhs_layout)
+        layout.addWidget(lhs_frame)
+
+        rhs_frame = QtWidgets.QFrame()
+        rhs_layout = QtWidgets.QVBoxLayout()
+        rhs_layout.addWidget(self.make_command_state_groupbox())
+        rhs_layout.addWidget(self.make_offboard_control_groupbox())
+        rhs_frame.setLayout(rhs_layout)
+        layout.addWidget(rhs_frame)
         self.setLayout(layout)
         self.setFixedSize(self.sizeHint())
 
