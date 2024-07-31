@@ -232,6 +232,17 @@ class Page(QtWidgets.QWidget):
 
         return box
 
+    def _set_arming_button_style(self):
+        self._arming_button.setStyleSheet(
+            """QPushButton {
+    color : %s;
+    background-color: %s;
+    font-size: 25px;
+    font-weight: bold;
+}"""
+            % (("black", "white") if self._is_armed else ("white", "red"))
+        )
+
     def make_user_command_groupbox(self):
         box = QtWidgets.QGroupBox("User Commands")
         layout = QtWidgets.QGridLayout()
@@ -239,6 +250,7 @@ class Page(QtWidgets.QWidget):
         self._arming_button = QtWidgets.QPushButton(
             "Disarm" if self._is_armed else "Arm"
         )
+        self._set_arming_button_style()
         self._arming_button.clicked.connect(self._trigger_arming)
         layout.addWidget(self._arming_button, 0, 0)
 
@@ -262,6 +274,12 @@ class Page(QtWidgets.QWidget):
             "MANUAL",
         ]
         self._mode_menu.addItems(modes)
+        self._mode_menu.setStyleSheet(
+            """QComboBox {
+    font-size: 25px;
+    font-weight: bold;
+}"""
+        )
         self._mode_menu.currentIndexChanged.connect(self._set_mode)
         layout.addWidget(self._mode_menu, 0, 1)
 
@@ -296,14 +314,7 @@ class Page(QtWidgets.QWidget):
         self._armed_lbl.setText(armed_str[int(self._is_armed)])
         self._armed_lbl.set_color(armed_colors[int(self._is_armed)])
         self._arming_button.setText("Disarm" if self._is_armed else "Arm")
-        self._arming_button.setStyleSheet(
-            """QPushButton {
-    color : %s;
-    background-color: %s;
-    font-weight: bold;
-}"""
-            % (("black", "white") if self._is_armed else ("white", "red"))
-        )
+        self._set_arming_button_style()
         self._mode_lbl.setText(mode)
 
     def update_nsats(self, value):
