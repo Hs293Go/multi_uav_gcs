@@ -379,11 +379,13 @@ class Page(QtWidgets.QWidget):
 
     def _copy_position(self):
         values = self._enu_box.array_values
+        yaw_value = self._rpy_box.array_values[-1]
 
         if values != 3:
             for e, v in zip(self._refs_line_edits, values):
                 assert isinstance(e, QtWidgets.QLineEdit)
                 e.setText("%.2f" % v)
+        self._refs_line_edits[-1].setText("%.2f" % yaw_value)
 
 
 class ArrayDisplayGroupBox(QtWidgets.QGroupBox):
