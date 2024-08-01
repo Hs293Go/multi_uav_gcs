@@ -206,7 +206,14 @@ class Page(QtWidgets.QWidget):
         for it in self._sp_boxes:
             self._setpoints.addWidget(it)
 
-        box.setLayout(self._setpoints)
+        display_box.setLayout(self._setpoints)
+        layout.addWidget(display_box)
+
+        interact_box = QtWidgets.QGroupBox("Send References")
+        interact_layout = QtWidgets.QGridLayout()
+        interact_box.setLayout(interact_layout)
+        layout.addWidget(interact_box)
+        box.setLayout(layout)
 
         return box
 

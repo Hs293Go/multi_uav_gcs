@@ -69,6 +69,24 @@ class VehicleNode(QtCore.QObject):
         }
         self.update_odom_topic(self._odom_topic)
 
+        try:
+            from fsc_autopilot_msgs.msg import TrackingReference
+
+            self._pub = rospy.Publisher(
+                "%s/position_controller/target" % self._prefix,
+                TrackingReference,
+                queue_size=1,
+            )
+            self._msg = TrackingReference()
+
+            self._publish_target_timer = rospy.Timer(
+                rospy.Duration.from_sec(0.01), self._publish_target_loop
+            )
+
+        except ImportError:
+            rospy.logerr("Failed to import fsc_autopilot_msgs")
+            self._pub = None
+
     @property
     def subs(self):
         return self._subs
@@ -76,6 +94,13 @@ class VehicleNode(QtCore.QObject):
     @property
     def odom_topic(self):
         return self._odom_topic
+
+    def _publish_target_loop(self, _):
+
+        if self._pub is None or self._msg is None:
+            return
+        self._msg.header.stamp = rospy.Time.now()
+        self._pub.publish(self._msg)
 
     def subscribe_odom(self):
         if "odom" in self._subs:
