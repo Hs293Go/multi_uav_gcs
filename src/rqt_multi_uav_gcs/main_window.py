@@ -120,6 +120,7 @@ class Page(QtWidgets.QWidget):
         self.arming.connect(self._receiver.arming)
         self.set_mode.connect(self._receiver.set_mode)
         self.update_odom_topic.connect(self._receiver.update_odom_topic)
+        self.send_refs.connect(self._receiver.send_refs)
 
     # Group Box Definitions
     # ---------------------
@@ -196,7 +197,7 @@ class Page(QtWidgets.QWidget):
         box.setLayout(layout)
         return box
 
-    def make_control_groupbox(self):
+    def make_offboard_control_groupbox(self):
         box = StyledGroupBox("Offboard Control")
         layout = QtWidgets.QGridLayout()
 
@@ -206,11 +207,11 @@ class Page(QtWidgets.QWidget):
         self._sp_boxes = [
             ArrayDisplayGroupBox(
                 "Attitude Setpoint",
-                ["Thrust"] + ["%s (°)" % it for it in ["roll", "pitch", "yaw"]],
+                ["%s (°)" % it for it in ["roll", "pitch", "yaw"]] + ["Thrust"],
             ),
             ArrayDisplayGroupBox(
                 "Body Rates Setpoint",
-                ["Thrust"] + ["ω<sub>%s</sub>" % it for it in "XYZ"],
+                ["ω<sub>%s</sub>" % it for it in "XYZ"] + ["Thrust"],
             ),
         ]
         for it in self._sp_boxes:
@@ -219,10 +220,32 @@ class Page(QtWidgets.QWidget):
         display_box.setLayout(self._setpoints)
         layout.addWidget(display_box)
 
-        interact_box = QtWidgets.QGroupBox("Send References")
-        interact_layout = QtWidgets.QGridLayout()
-        interact_box.setLayout(interact_layout)
-        layout.addWidget(interact_box)
+        refs_box = QtWidgets.QGroupBox("Send References")
+        refs_layout = QtWidgets.QGridLayout()
+
+        self._refs_line_edits = []
+        for idx, it in enumerate(list("xyz") + ["yaw"]):
+            line_edit = QtWidgets.QLineEdit("0.0")
+            if it == "yaw":
+                label = "yaw reference (°)"
+            else:
+                label = "%s reference (m)" % it.upper()
+            line_edit.setPlaceholderText(label)
+            refs_layout.addWidget(QtWidgets.QLabel(label), 0, idx)
+            refs_layout.addWidget(line_edit, 1, idx)
+            line_edit.setValidator(QtGui.QDoubleValidator())
+            self._refs_line_edits.append(line_edit)
+
+        self._copy_position_button = QtWidgets.QPushButton("Copy current position")
+        self._copy_position_button.clicked.connect(self._copy_position)
+        refs_layout.addWidget(self._copy_position_button, 2, 0)
+
+        self._send_refs_button = QtWidgets.QPushButton("Send Reference")
+        self._send_refs_button.clicked.connect(self._send_refs)
+        refs_layout.addWidget(self._send_refs_button, 2, 1)
+
+        refs_box.setLayout(refs_layout)
+        layout.addWidget(refs_box)
         box.setLayout(layout)
 
         return box
@@ -349,6 +372,19 @@ class Page(QtWidgets.QWidget):
             self._odometry_line_edit.setPlaceholderText("")
             self._odom_toggle_button.setText("Use odometry")
 
+    def _send_refs(self):
+        refs = [float(e.text()) for e in self._refs_line_edits]
+
+        self.send_refs.emit(*refs)
+
+    def _copy_position(self):
+        values = self._enu_box.array_values
+
+        if values != 3:
+            for e, v in zip(self._refs_line_edits, values):
+                assert isinstance(e, QtWidgets.QLineEdit)
+                e.setText("%.2f" % v)
+
 
 class ArrayDisplayGroupBox(QtWidgets.QGroupBox):
 
@@ -390,11 +426,17 @@ QLCDNumber {
             )
             layout.addWidget(lcd_number, self.DISPLAY_ROW, idx)
             self._lcd_numbers.append(lcd_number)
+        self._array_values = []
         self.setLayout(layout)
+
+    @property
+    def array_values(self):
+        return self._array_values
 
     def display(self, *values):
         if len(self._lcd_numbers) != len(values):
             raise RuntimeError("Mismatch between number of fields and values")
+        self._array_values[:] = map(float, values)
         for field, val in zip(self._lcd_numbers, values):
             field.display(val)
 

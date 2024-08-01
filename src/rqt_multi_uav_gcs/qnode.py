@@ -77,11 +77,6 @@ class VehicleNode(QtCore.QObject):
                 TrackingReference,
                 queue_size=1,
             )
-            self._msg = TrackingReference()
-
-            self._publish_target_timer = rospy.Timer(
-                rospy.Duration.from_sec(0.01), self._publish_target_loop
-            )
 
         except ImportError:
             rospy.logerr("Failed to import fsc_autopilot_msgs")
@@ -95,12 +90,19 @@ class VehicleNode(QtCore.QObject):
     def odom_topic(self):
         return self._odom_topic
 
-    def _publish_target_loop(self, _):
+    def send_refs(self, x, y, z, yaw):
+        from fsc_autopilot_msgs.msg import TrackingReference
 
-        if self._pub is None or self._msg is None:
+        if self._pub is None:
             return
-        self._msg.header.stamp = rospy.Time.now()
-        self._pub.publish(self._msg)
+
+        msg = TrackingReference()
+        msg.pose.position.x = x
+        msg.pose.position.y = y
+        msg.pose.position.z = z
+        msg.yaw = yaw
+        msg.header.stamp = rospy.Time.now()
+        self._pub.publish(msg)
 
     def subscribe_odom(self):
         if "odom" in self._subs:
@@ -162,11 +164,11 @@ class VehicleNode(QtCore.QObject):
             angles = Rotation.from_quat(
                 [getattr(msg.orientation, it) for it in "xyzw"]
             ).as_euler("xyz", True)
-            self.update_setpoints.emit(0, msg.thrust, *angles)
+            self.update_setpoints.emit(0, *angles, msg.thrust)
 
         if msg.type_mask == AttitudeTarget.IGNORE_ATTITUDE:
             self.update_setpoints.emit(
-                1, msg.thrust, *[getattr(msg.body_rate, it) for it in "xyz"]
+                1, *[getattr(msg.body_rate, it) for it in "xyz"], msg.thrust
             )
 
     def _odom_cb(self, msg):
