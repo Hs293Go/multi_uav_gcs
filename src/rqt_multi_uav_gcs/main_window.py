@@ -1,3 +1,5 @@
+from math import pi
+
 from python_qt_binding import QtCore, QtGui, QtWidgets
 
 from rqt_multi_uav_gcs import qnode
@@ -27,11 +29,9 @@ class MainWindow(QtWidgets.QWidget):
         layout.addItem(spacer, 0, 3)
 
         self._tabs = QtWidgets.QTabWidget()
-        self._tabs.setStyleSheet(
-            """QTabWidget {
+        self._tabs.setStyleSheet("""QTabWidget {
     font-size: 20px;
-}"""
-        )
+}""")
         self._tabs.setTabsClosable(True)
         self._tabs.tabCloseRequested.connect(self.remove_tab)
 
@@ -77,7 +77,6 @@ class MainWindow(QtWidgets.QWidget):
 
 
 class Page(QtWidgets.QWidget):
-
     arming = QtCore.pyqtSignal(bool)
     set_mode = QtCore.pyqtSignal(str)
     update_odom_topic = QtCore.pyqtSignal(str)
@@ -224,25 +223,62 @@ class Page(QtWidgets.QWidget):
         refs_layout = QtWidgets.QGridLayout()
 
         self._refs_line_edits = []
+        self._refs_bounds_line_edits = []
         for idx, it in enumerate(list("xyz") + ["yaw"]):
-            line_edit = QtWidgets.QLineEdit("0.0")
             if it == "yaw":
+                line_edit = BoundedLineEdit(0.0, (-pi, pi))
                 label = "yaw reference (°)"
             else:
+                line_edit = BoundedLineEdit(0.0)
                 label = "%s reference (m)" % it.upper()
             line_edit.setPlaceholderText(label)
-            refs_layout.addWidget(QtWidgets.QLabel(label), 0, idx)
-            refs_layout.addWidget(line_edit, 1, idx)
-            line_edit.setValidator(QtGui.QDoubleValidator())
+            refs_layout.addWidget(QtWidgets.QLabel(label), 0, 2 * idx, 1, 2)
+            refs_layout.addWidget(line_edit, 1, 2 * idx, 1, 2)
             self._refs_line_edits.append(line_edit)
+            if it != "yaw":
+                bounds = (BoundedLineEdit(-5), BoundedLineEdit(5))
+                line_edit.set_bounds(float(bounds[0].text()), float(bounds[1].text()))
+                for v in bounds:
+                    v.setEnabled(False)
+                    v.setFixedWidth(80)
+                bounds[0].textChanged.connect(
+                    lambda lb_str, ub=bounds[1], target=line_edit: target.set_bounds(
+                        float(lb_str), float(ub.text())
+                    )
+                )
+                bounds[1].textChanged.connect(
+                    lambda ub_str, lb=bounds[0], target=line_edit: target.set_bounds(
+                        float(lb.text()), float(ub_str)
+                    )
+                )
+
+                self._refs_bounds_line_edits.extend(bounds)
+                refs_layout.addWidget(
+                    QtWidgets.QLabel("Min. %s (m)" % it.upper()), 2, 2 * idx, 1, 1
+                )
+                refs_layout.addWidget(
+                    QtWidgets.QLabel("Max. %s (m)" % it.upper()), 2, 2 * idx + 1, 1, 1
+                )
+                refs_layout.addWidget(bounds[0], 3, 2 * idx, 1, 1)
+                refs_layout.addWidget(bounds[1], 3, 2 * idx + 1, 1, 1)
+            else:
+                unlock_bounds_checkbox = QtWidgets.QCheckBox("Unlock bounds")
+
+                unlock_bounds_checkbox.stateChanged.connect(
+                    lambda s: [
+                        bnd.setEnabled(s == QtCore.Qt.Checked)
+                        for bnd in self._refs_bounds_line_edits
+                    ]
+                )
+                refs_layout.addWidget(unlock_bounds_checkbox, 3, 7, 1, 1)
 
         self._copy_position_button = QtWidgets.QPushButton("Copy current position")
         self._copy_position_button.clicked.connect(self._copy_position)
-        refs_layout.addWidget(self._copy_position_button, 2, 0)
+        refs_layout.addWidget(self._copy_position_button, 4, 0, 1, 2)
 
         self._send_refs_button = QtWidgets.QPushButton("Send Reference")
         self._send_refs_button.clicked.connect(self._send_refs)
-        refs_layout.addWidget(self._send_refs_button, 2, 1)
+        refs_layout.addWidget(self._send_refs_button, 4, 2, 1, 2)
 
         refs_box.setLayout(refs_layout)
         layout.addWidget(refs_box)
@@ -251,15 +287,12 @@ class Page(QtWidgets.QWidget):
         return box
 
     def _set_arming_button_style(self):
-        self._arming_button.setStyleSheet(
-            """QPushButton {
+        self._arming_button.setStyleSheet("""QPushButton {
     color : %s;
     background-color: %s;
     font-size: 25px;
     font-weight: bold;
-}"""
-            % (("black", "white") if self._is_armed else ("white", "red"))
-        )
+}""" % (("black", "white") if self._is_armed else ("white", "red")))
 
     def make_user_command_groupbox(self):
         box = StyledGroupBox("Commands")
@@ -292,12 +325,10 @@ class Page(QtWidgets.QWidget):
             "MANUAL",
         ]
         self._mode_menu.addItems(modes)
-        self._mode_menu.setStyleSheet(
-            """QComboBox {
+        self._mode_menu.setStyleSheet("""QComboBox {
     font-size: 25px;
     font-weight: bold;
-}"""
-        )
+}""")
         self._mode_menu.currentIndexChanged.connect(self._set_mode)
         layout.addWidget(self._mode_menu, 0, 1)
 
@@ -389,20 +420,17 @@ class Page(QtWidgets.QWidget):
 
 
 class ArrayDisplayGroupBox(QtWidgets.QGroupBox):
-
     DESCRIPTION_ROW = 0
     DISPLAY_ROW = 1
 
     def __init__(self, title, elements, digits=5):
         super().__init__(title)
-        self.setStyleSheet(
-            """QGroupBox
+        self.setStyleSheet("""QGroupBox
 {
     font-size: 20px;
     font-weight: bold;
 }
-"""
-        )
+""")
         layout = QtWidgets.QGridLayout()
 
         self._lcd_numbers = []
@@ -418,14 +446,12 @@ class ArrayDisplayGroupBox(QtWidgets.QGroupBox):
             lcd_number.setMinimumHeight(40)
             lcd_number.setMinimumWidth(160)
             lcd_number.setSegmentStyle(QtWidgets.QLCDNumber.Flat)
-            lcd_number.setStyleSheet(
-                """
+            lcd_number.setStyleSheet("""
 QLCDNumber {
     color: #33FF00;
     background-color: #171A1B;
 }
-"""
-            )
+""")
             layout.addWidget(lcd_number, self.DISPLAY_ROW, idx)
             self._lcd_numbers.append(lcd_number)
         self._array_values = []
@@ -454,25 +480,48 @@ class StatusLabel(QtWidgets.QLabel):
             self.set_color(init_color)
 
     def set_color(self, color):
-        self.setStyleSheet(
-            """
+        self.setStyleSheet("""
 QLabel {
     color: %s;
     border : 1px solid %s;
-}"""
-            % (color, color)
-        )
+}""" % (color, color))
 
 
 class StyledGroupBox(QtWidgets.QGroupBox):
-
     def __init__(self, title):
         super().__init__(title)
-        self.setStyleSheet(
-            """QGroupBox
+        self.setStyleSheet("""QGroupBox
 {
     font-size: 25px;
     font-weight: bold;
 }
-"""
-        )
+""")
+
+
+class StrictlyBoundedValidator(QtGui.QDoubleValidator):
+    def validate(self, s, i):
+
+        if not s or s == "-":
+            return QtGui.QValidator.Intermediate, s, i
+
+        try:
+            d = float(s)
+        except ValueError:
+            return QtGui.QValidator.Invalid, s, i
+
+        if self.bottom() <= d <= self.top():
+            return QtGui.QValidator.Acceptable, s, i
+        return QtGui.QValidator.Invalid, s, i
+
+
+class BoundedLineEdit(QtWidgets.QLineEdit):
+    def __init__(self, init_value=0.0, bounds=()):
+        super().__init__(str(init_value))
+        self._validator = StrictlyBoundedValidator()
+        if len(bounds) == 2:
+            self._validator.setRange(bounds[0], bounds[1])
+        self.setValidator(self._validator)
+
+    def set_bounds(self, lb, ub):
+        self._validator.setRange(lb, ub)
+        self.setValidator(self._validator)
