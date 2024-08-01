@@ -115,15 +115,7 @@ class Page(QtWidgets.QWidget):
     # ---------------------
     def make_vehicle_state_groupbox(self):
         layout = QtWidgets.QGridLayout()
-        box = QtWidgets.QGroupBox("UAV States")
-        box.setStyleSheet(
-            """QGroupBox
-{
-    font-size: 25px;
-    font-weight: bold;
-}
-"""
-        )
+        box = StyledGroupBox("UAV States")
 
         self._lla_box = ArrayDisplayGroupBox(
             "Global Position 🌐",
@@ -162,17 +154,9 @@ class Page(QtWidgets.QWidget):
         return box
 
     def make_command_state_groupbox(self):
-        box = QtWidgets.QGroupBox("UAV Status")
+        box = StyledGroupBox("UAV Status")
         layout = QtWidgets.QGridLayout()
 
-        box.setStyleSheet(
-            """QGroupBox
-{
-    font-size: 25px;
-    font-weight: bold;
-}
-"""
-        )
         self._connected_lbl = StatusLabel("Disconnected", "red")
         self._connected_lbl.setFixedWidth(150)
         self._armed_lbl = StatusLabel("Disarmed", "green")
@@ -203,16 +187,10 @@ class Page(QtWidgets.QWidget):
         return box
 
     def make_control_groupbox(self):
-        box = QtWidgets.QGroupBox("Offboard Control")
-        box.setStyleSheet(
-            """QGroupBox
-{
-    font-size: 25px;
-    font-weight: bold;
-}
-"""
-        )
+        box = StyledGroupBox("Offboard Control")
+        layout = QtWidgets.QGridLayout()
 
+        display_box = QtWidgets.QGroupBox("Setpoints feedback")
         self._setpoints = QtWidgets.QStackedLayout()
 
         self._sp_boxes = [
@@ -244,7 +222,7 @@ class Page(QtWidgets.QWidget):
         )
 
     def make_user_command_groupbox(self):
-        box = QtWidgets.QGroupBox("User Commands")
+        box = StyledGroupBox("Commands")
         layout = QtWidgets.QGridLayout()
 
         self._arming_button = QtWidgets.QPushButton(
@@ -422,4 +400,18 @@ QLabel {
     border : 1px solid %s;
 }"""
             % (color, color)
+        )
+
+
+class StyledGroupBox(QtWidgets.QGroupBox):
+
+    def __init__(self, title):
+        super().__init__(title)
+        self.setStyleSheet(
+            """QGroupBox
+{
+    font-size: 25px;
+    font-weight: bold;
+}
+"""
         )
