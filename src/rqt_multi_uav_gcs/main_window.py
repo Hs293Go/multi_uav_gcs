@@ -306,7 +306,7 @@ class Page(QtWidgets.QWidget):
         layout.addWidget(self._arming_button, 0, 0)
 
         self._mode_menu = QtWidgets.QComboBox()
-        modes = [
+        px4_modes = [
             "AUTO.PRECLAND",
             "AUTO.FOLLOW_TARGET",
             "AUTO.RTGS",
@@ -324,13 +324,50 @@ class Page(QtWidgets.QWidget):
             "ACRO",
             "MANUAL",
         ]
-        self._mode_menu.addItems(modes)
+        apm_modes = [
+            "GUIDED_NOGPS",
+            "AVOID_ADSB",
+            "THROW",
+            "BRAKE",
+            "POSHOLD",
+            "AUTOTUNE",
+            "FLIP",
+            "SPORT",
+            "DRIFT",
+            "OF_LOITER",
+            "LAND",
+            "POSITION",
+            "CIRCLE",
+            "RTL",
+            "LOITER",
+            "GUIDED",
+            "AUTO",
+            "ALT_HOLD",
+            "ACRO",
+            "STABILIZE",
+        ]
+        self._mode_menu.addItems(px4_modes)
         self._mode_menu.setStyleSheet("""QComboBox {
     font-size: 25px;
     font-weight: bold;
 }""")
         self._mode_menu.currentIndexChanged.connect(self._set_mode)
         layout.addWidget(self._mode_menu, 0, 1)
+        self._mode_toggle = QtWidgets.QCheckBox("Use APM Modes")
+        self._mode_toggle.setStyleSheet("""QCheckBox {
+    font-size: 25px;
+    font-weight: bold;
+}""")
+        layout.addWidget(self._mode_toggle, 0, 2)
+
+        def toggle_modeset(state):
+            self._mode_menu.clear()
+            if state == QtCore.Qt.Checked:
+                self._mode_menu.addItems(apm_modes)
+            else:
+                self._mode_menu.addItems(px4_modes)
+
+        self._mode_toggle.stateChanged.connect(toggle_modeset)
 
         box.setLayout(layout)
         return box
