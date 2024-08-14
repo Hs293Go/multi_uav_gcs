@@ -313,6 +313,12 @@ class Page(QtWidgets.QWidget):
 
         self._mode_menu = QtWidgets.QComboBox()
         px4_modes = [
+            "STABILIZED",
+            "ALTCTL",
+            "POSCTL",
+            "OFFBOARD",
+            "AUTO.LOITER",
+            "AUTO.TAKEOFF",
             "AUTO.PRECLAND",
             "AUTO.FOLLOW_TARGET",
             "AUTO.RTGS",
@@ -320,37 +326,31 @@ class Page(QtWidgets.QWidget):
             "AUTO.RTL",
             "AUTO.MISSION",
             "RATTITUDE",
-            "AUTO.LOITER",
-            "STABILIZED",
-            "AUTO.TAKEOFF",
-            "OFFBOARD",
-            "POSCTL",
-            "ALTCTL",
             "AUTO.READY",
             "ACRO",
             "MANUAL",
         ]
         apm_modes = [
+            "STABILIZE",
+            "ALT_HOLD",
+            "POSHOLD",
+            "POSITION",
+            "GUIDED",
+            "LOITER",
             "GUIDED_NOGPS",
             "AVOID_ADSB",
             "THROW",
             "BRAKE",
-            "POSHOLD",
             "AUTOTUNE",
             "FLIP",
             "SPORT",
             "DRIFT",
             "OF_LOITER",
             "LAND",
-            "POSITION",
             "CIRCLE",
             "RTL",
-            "LOITER",
-            "GUIDED",
             "AUTO",
-            "ALT_HOLD",
             "ACRO",
-            "STABILIZE",
         ]
         self._mode_menu.addItems(px4_modes)
         self._mode_menu.setStyleSheet("""QComboBox {
@@ -367,6 +367,7 @@ class Page(QtWidgets.QWidget):
         layout.addWidget(self._mode_toggle, 0, 2)
 
         def toggle_modeset(state):
+            self._mode_menu.blockSignals(True)
             self._mode_menu.clear()
             if state == QtCore.Qt.Checked:
                 self._mode_menu.addItems(apm_modes)
