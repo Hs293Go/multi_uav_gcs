@@ -3,12 +3,13 @@ import collections.abc
 import rospy
 from geometry_msgs.msg import PoseStamped, TwistStamped
 from mavros_msgs.msg import AttitudeTarget, State
-from mavros_msgs.srv import CommandBool, CommandHome, CommandTOL, SetMode
+from mavros_msgs.srv import CommandBool, CommandHome, SetMode
 from nav_msgs.msg import Odometry
 from python_qt_binding import QtCore
 from scipy.spatial.transform import Rotation
 from sensor_msgs.msg import BatteryState, Imu, NavSatFix
 from std_msgs.msg import UInt32
+from std_srvs.srv import Empty
 
 
 class VehicleNode(QtCore.QObject):
@@ -72,7 +73,7 @@ class VehicleNode(QtCore.QObject):
         try:
             from fsc_autopilot_msgs.msg import TrackingReference
 
-            self._pub = rospy.Publisher(
+            self._target_pub = rospy.Publisher(
                 "%s/position_controller/target" % self._prefix,
                 TrackingReference,
                 queue_size=1,
@@ -80,7 +81,11 @@ class VehicleNode(QtCore.QObject):
 
         except ImportError:
             rospy.logerr("Failed to import fsc_autopilot_msgs")
-            self._pub = None
+            self._target_pub = None
+
+        self.set_home_srv = rospy.ServiceProxy(
+            "%s/state_estimator/override_set_home" % self._prefix, Empty
+        )
 
     @property
     def subs(self):
@@ -93,7 +98,7 @@ class VehicleNode(QtCore.QObject):
     def send_refs(self, x, y, z, yaw):
         from fsc_autopilot_msgs.msg import TrackingReference
 
-        if self._pub is None:
+        if self._target_pub is None:
             return
 
         msg = TrackingReference()
@@ -102,7 +107,7 @@ class VehicleNode(QtCore.QObject):
         msg.pose.position.z = z
         msg.yaw = yaw
         msg.header.stamp = rospy.Time.now()
-        self._pub.publish(msg)
+        self._target_pub.publish(msg)
 
     def subscribe_odom(self):
         if "odom" in self._subs:
@@ -143,6 +148,10 @@ class VehicleNode(QtCore.QObject):
 
     def set_mode(self, mode_str):
         self._set_mode_client(custom_mode=mode_str)
+
+    def set_home(self):
+
+        self.set_home_srv()
 
     def _imu_cb(self, msg):
         angles = Rotation.from_quat(

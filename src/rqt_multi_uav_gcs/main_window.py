@@ -85,8 +85,9 @@ class Page(QtWidgets.QWidget):
     set_mode = QtCore.pyqtSignal(str)
     update_odom_topic = QtCore.pyqtSignal(str)
     send_refs = QtCore.pyqtSignal(float, float, float, float)
+    set_home = QtCore.pyqtSignal(float, float, float)
 
-    def __init__(self, receiver):
+    def __init__(self, receiver: qnode.QNode):
         super().__init__()
         self._is_armed = False
         self._receiver = receiver
@@ -124,6 +125,7 @@ class Page(QtWidgets.QWidget):
         self.set_mode.connect(self._receiver.set_mode)
         self.update_odom_topic.connect(self._receiver.update_odom_topic)
         self.send_refs.connect(self._receiver.send_refs)
+        self.set_home.connect(self._receiver.set_home)
 
     # Group Box Definitions
     # ---------------------
@@ -363,6 +365,19 @@ class Page(QtWidgets.QWidget):
     font-weight: bold;
 }""")
         layout.addWidget(self._mode_toggle, 0, 2)
+
+        set_home_button = QtWidgets.QPushButton("Set Home")
+        set_home_button.setStyleSheet("""QPushButton {
+    font-size: 25px;
+    font-weight: bold;
+}""")
+
+        def set_home_action(_):
+            if len(self._enu_box.array_values) == 3:
+                self.set_home.emit(*self._enu_box.array_values)
+
+        set_home_button.clicked.connect(set_home_action)
+        layout.addWidget(set_home_button, 1, 0)
 
         def toggle_modeset(state):
             self._mode_menu.blockSignals(True)
