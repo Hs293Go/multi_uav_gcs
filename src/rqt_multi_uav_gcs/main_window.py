@@ -247,12 +247,12 @@ class Page(QtWidgets.QWidget):
                     v.setFixedWidth(80)
                 bounds[0].textChanged.connect(
                     lambda lb_str, ub=bounds[1], target=line_edit: target.set_bounds(
-                        float(lb_str), float(ub.text())
+                        float(lb_str) if lb_str and lb_str != "-" else 0.0, float(ub.text())
                     )
                 )
                 bounds[1].textChanged.connect(
                     lambda ub_str, lb=bounds[0], target=line_edit: target.set_bounds(
-                        float(lb.text()), float(ub_str)
+                        float(lb.text()), float(ub_str) if ub_str and ub_str != "-" else 0.0
                     )
                 )
 
