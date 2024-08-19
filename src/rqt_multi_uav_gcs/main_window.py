@@ -1,5 +1,3 @@
-from math import pi
-
 from python_qt_binding import QtCore, QtWidgets
 
 from rqt_multi_uav_gcs import qnode
@@ -232,7 +230,7 @@ class Page(QtWidgets.QWidget):
         self._refs_bounds_line_edits = []
         for idx, it in enumerate(list("xyz") + ["yaw"]):
             if it == "yaw":
-                line_edit = BoundedLineEdit(0.0, (-pi, pi))
+                line_edit = BoundedLineEdit(0.0, (-180, 180))
                 label = "yaw reference (°)"
             else:
                 line_edit = BoundedLineEdit(0.0)
@@ -373,6 +371,7 @@ class Page(QtWidgets.QWidget):
                 self._mode_menu.addItems(apm_modes)
             else:
                 self._mode_menu.addItems(px4_modes)
+            self._mode_menu.blockSignals(False)
 
         self._mode_toggle.stateChanged.connect(toggle_modeset)
 
