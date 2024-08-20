@@ -136,17 +136,27 @@ class Page(QtWidgets.QWidget):
         self._lla_box = ArrayDisplayGroupBox(
             "Global Position 🌐",
             ["lat (deg)", "lon (deg)", "alt (m-AGL)"],
-            digits=(4, 4, 7),
+            digits=(4, 4, 6),
+            width=120,
+            height=40,
         )
         self._enu_box = ArrayDisplayGroupBox(
-            "Local Position ⤱", ["%s (m)" % it for it in "XYZ"]
+            "Local Position ⤱",
+            ["%s (m)" % it for it in "XYZ"],
+            width=120,
+            height=40,
         )
         self._vel_box = ArrayDisplayGroupBox(
             "Local Velocity ⇶",
             ["v<sub>%s</sub> (ms<sup>-1</sup>)" % it for it in "XYZ"],
+            width=120,
+            height=40,
         )
         self._rpy_box = ArrayDisplayGroupBox(
-            "Orientation ⭯", ["%s (°)" % it for it in ("roll", "pitch", "yaw")]
+            "Orientation ⭯",
+            ["%s (°)" % it for it in ("roll", "pitch", "yaw")],
+            width=120,
+            height=40,
         )
         layout.addWidget(self._lla_box, 1, 0, 1, 2)
         layout.addWidget(self._rpy_box, 1, 3, 1, 2)
@@ -173,18 +183,15 @@ class Page(QtWidgets.QWidget):
         box = StyledGroupBox("UAV Status")
         layout = QtWidgets.QGridLayout()
 
-        self._connected_lbl = StatusLabel("Disconnected", "red")
-        self._connected_lbl.setFixedWidth(150)
-        self._armed_lbl = StatusLabel("Disarmed", "green")
-        self._armed_lbl.setFixedWidth(150)
-        self._mode_lbl = StatusLabel("Unknown", "black")
-        self._mode_lbl.setFixedWidth(200)
+        self._connected_lbl = StatusLabel("Disconnected", "red", width=150)
+        self._armed_lbl = StatusLabel("Disarmed", "green", width=100)
+        self._mode_lbl = StatusLabel("Unknown", "black", width=200)
 
         layout.addWidget(self._connected_lbl, 0, 0)
         layout.addWidget(self._armed_lbl, 0, 1)
         layout.addWidget(self._mode_lbl, 0, 2)
 
-        layout.addWidget(StatusLabel("# Sats", "black"), 0, 3)
+        layout.addWidget(StatusLabel("# Sats", "black", width=80), 0, 3)
         self._nsat_box = QtWidgets.QLCDNumber(2)
 
         self._nsat_box.setMinimumHeight(30)
@@ -213,10 +220,14 @@ class Page(QtWidgets.QWidget):
             ArrayDisplayGroupBox(
                 "Attitude Setpoint",
                 ["%s (°)" % it for it in ["roll", "pitch", "yaw"]] + ["Thrust"],
+                width=80,
+                height=40,
             ),
             ArrayDisplayGroupBox(
                 "Body Rates Setpoint",
                 ["ω<sub>%s</sub>" % it for it in "XYZ"] + ["Thrust"],
+                width=80,
+                height=40,
             ),
         ]
         for it in self._sp_boxes:

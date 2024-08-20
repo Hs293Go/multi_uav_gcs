@@ -41,11 +41,14 @@ class StyledGroupBox(QtWidgets.QGroupBox):
 
 
 class StatusLabel(QtWidgets.QLabel):
-    def __init__(self, init_text, init_color=None):
+    def __init__(self, init_text, init_color=None, width=0):
         super().__init__(init_text)
         lbl_fontsize = QtGui.QFont()
         lbl_fontsize.setPointSize(15)
         self.setFont(lbl_fontsize)
+
+        if width:
+            self.setFixedWidth(width)
 
         if init_color is not None:
             self.set_color(init_color)
@@ -62,7 +65,7 @@ class ArrayDisplayGroupBox(QtWidgets.QGroupBox):
     DESCRIPTION_ROW = 0
     DISPLAY_ROW = 1
 
-    def __init__(self, title, elements, digits=5):
+    def __init__(self, title, elements, digits=4, width=0, height=0):
         super().__init__(title)
         self.setStyleSheet("""QGroupBox
 {
@@ -82,8 +85,10 @@ class ArrayDisplayGroupBox(QtWidgets.QGroupBox):
             lbl.setFont(lbl_font)
             layout.addWidget(lbl, self.DESCRIPTION_ROW, idx)
             lcd_number = QtWidgets.QLCDNumber(digits[idx])
-            lcd_number.setMinimumHeight(40)
-            lcd_number.setMinimumWidth(160)
+            if height:
+                lcd_number.setMinimumHeight(height)
+            if width:
+                lcd_number.setMinimumWidth(width)
             lcd_number.setSegmentStyle(QtWidgets.QLCDNumber.Flat)
             lcd_number.setStyleSheet("""
 QLCDNumber {
