@@ -1,6 +1,7 @@
 import collections.abc
 
 import rospy
+from fsc_autopilot_msgs.msg import PositionControllerReference
 from geometry_msgs.msg import PoseStamped, TwistStamped
 from mavros_msgs.msg import AttitudeTarget, State
 from mavros_msgs.srv import CommandBool, CommandHome, SetMode
@@ -71,11 +72,9 @@ class VehicleNode(QtCore.QObject):
         self.update_odom_topic(self._odom_topic)
 
         try:
-            from fsc_autopilot_msgs.msg import TrackingReference
-
             self._target_pub = rospy.Publisher(
-                "%s/position_controller/target" % self._prefix,
-                TrackingReference,
+                "%s/fsc_autopilot/position_controller/reference" % self._prefix,
+                PositionControllerReference,
                 queue_size=1,
             )
 
@@ -96,16 +95,15 @@ class VehicleNode(QtCore.QObject):
         return self._odom_topic
 
     def send_refs(self, x, y, z, yaw):
-        from fsc_autopilot_msgs.msg import TrackingReference
-
         if self._target_pub is None:
             return
 
-        msg = TrackingReference()
-        msg.pose.position.x = x
-        msg.pose.position.y = y
-        msg.pose.position.z = z
+        msg = PositionControllerReference()
+        msg.position.x = x
+        msg.position.y = y
+        msg.position.z = z
         msg.yaw = yaw
+        msg.yaw_unit = PositionControllerReference.DEGREES
         msg.header.stamp = rospy.Time.now()
         self._target_pub.publish(msg)
 
@@ -150,7 +148,6 @@ class VehicleNode(QtCore.QObject):
         self._set_mode_client(custom_mode=mode_str)
 
     def set_home(self):
-
         self.set_home_srv()
 
     def _imu_cb(self, msg):
@@ -163,7 +160,6 @@ class VehicleNode(QtCore.QObject):
         self.update_battery.emit(msg.percentage, msg.voltage)
 
     def _setpoint_cb(self, msg: AttitudeTarget):
-
         if (
             msg.type_mask
             == AttitudeTarget.IGNORE_ROLL_RATE
