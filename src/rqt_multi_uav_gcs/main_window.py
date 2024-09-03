@@ -254,7 +254,12 @@ class Page(QtWidgets.QWidget):
             refs_layout.addWidget(line_edit, 1, 2 * idx, 1, 2)
             self._refs_line_edits.append(line_edit)
             if it != "yaw":
-                bounds = (BoundedLineEdit(-5), BoundedLineEdit(5))
+                geofence_length = 10.0
+
+                bounds = (
+                    BoundedLineEdit(-geofence_length),
+                    BoundedLineEdit(geofence_length),
+                )
                 line_edit.set_bounds(float(bounds[0].text()), float(bounds[1].text()))
                 for v in bounds:
                     v.setEnabled(False)
