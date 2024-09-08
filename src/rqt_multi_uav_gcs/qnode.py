@@ -71,16 +71,11 @@ class VehicleNode(QtCore.QObject):
         }
         self.update_odom_topic(self._odom_topic)
 
-        try:
-            self._target_pub = rospy.Publisher(
-                "%s/fsc_autopilot/position_controller/reference" % self._prefix,
-                PositionControllerReference,
-                queue_size=1,
-            )
-
-        except ImportError:
-            rospy.logerr("Failed to import fsc_autopilot_msgs")
-            self._target_pub = None
+        self._target_pub = rospy.Publisher(
+            "%s/fsc_autopilot/position_controller/reference" % self._prefix,
+            PositionControllerReference,
+            queue_size=1,
+        )
 
         self.set_home_srv = rospy.ServiceProxy(
             "%s/state_estimator/override_set_home" % self._prefix, Empty
