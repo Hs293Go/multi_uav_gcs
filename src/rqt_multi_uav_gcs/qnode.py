@@ -4,13 +4,12 @@ import rospy
 from fsc_autopilot_msgs.msg import PositionControllerReference
 from geometry_msgs.msg import PoseStamped, TwistStamped
 from mavros_msgs.msg import AttitudeTarget, State
-from mavros_msgs.srv import CommandBool, CommandHome, SetMode
+from mavros_msgs.srv import CommandBool, CommandInt, SetMode
 from nav_msgs.msg import Odometry
 from python_qt_binding import QtCore
 from scipy.spatial.transform import Rotation
 from sensor_msgs.msg import BatteryState, Imu, NavSatFix
 from std_msgs.msg import UInt32
-from std_srvs.srv import Empty
 
 
 class VehicleNode(QtCore.QObject):
@@ -35,7 +34,7 @@ class VehicleNode(QtCore.QObject):
             "%s/mavros/set_mode" % self._prefix, SetMode
         )
         self._set_home_client = rospy.ServiceProxy(
-            "%s/mavros/set_home" % self._prefix, CommandHome
+            "%s/state_estimator/override_set_home" % self._prefix, CommandInt
         )
         self._subs = {
             "imu": rospy.Subscriber(
@@ -75,10 +74,6 @@ class VehicleNode(QtCore.QObject):
             "%s/fsc_autopilot/position_controller/reference" % self._prefix,
             PositionControllerReference,
             queue_size=1,
-        )
-
-        self.set_home_srv = rospy.ServiceProxy(
-            "%s/state_estimator/override_set_home" % self._prefix, Empty
         )
 
     @property
@@ -142,8 +137,8 @@ class VehicleNode(QtCore.QObject):
     def set_mode(self, mode_str):
         self._set_mode_client(custom_mode=mode_str)
 
-    def set_home(self):
-        self.set_home_srv()
+    def set_home(self, home_x, home_y, home_z):
+        self._set_home_client(param1=home_x, param2=home_y, param3=home_z)
 
     def _imu_cb(self, msg):
         angles = Rotation.from_quat(

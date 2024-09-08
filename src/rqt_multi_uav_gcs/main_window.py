@@ -87,7 +87,7 @@ class Page(QtWidgets.QWidget):
     send_refs = QtCore.pyqtSignal(float, float, float, float)
     set_home = QtCore.pyqtSignal(float, float, float)
 
-    def __init__(self, receiver: qnode.QNode):
+    def __init__(self, receiver: qnode.VehicleNode):
         super().__init__()
         self._is_armed = False
         self._receiver = receiver
@@ -143,6 +143,7 @@ class Page(QtWidgets.QWidget):
         self._enu_box = ArrayDisplayGroupBox(
             "Local Position ⤱",
             ["%s (m)" % it for it in "XYZ"],
+            digits=5,
             width=120,
             height=40,
         )
@@ -260,12 +261,14 @@ class Page(QtWidgets.QWidget):
                     v.setFixedWidth(80)
                 bounds[0].textChanged.connect(
                     lambda lb_str, ub=bounds[1], target=line_edit: target.set_bounds(
-                        float(lb_str) if lb_str and lb_str != "-" else 0.0, float(ub.text())
+                        float(lb_str) if lb_str and lb_str != "-" else 0.0,
+                        float(ub.text()),
                     )
                 )
                 bounds[1].textChanged.connect(
                     lambda ub_str, lb=bounds[0], target=line_edit: target.set_bounds(
-                        float(lb.text()), float(ub_str) if ub_str and ub_str != "-" else 0.0
+                        float(lb.text()),
+                        float(ub_str) if ub_str and ub_str != "-" else 0.0,
                     )
                 )
 
@@ -377,6 +380,19 @@ class Page(QtWidgets.QWidget):
 }""")
         layout.addWidget(self._mode_toggle, 0, 2)
 
+        xyzbox = QtWidgets.QGroupBox()
+        sublayout = QtWidgets.QGridLayout()
+
+        home_location = []
+        for idx, char in enumerate("xyz"):
+            ith_home_location = QtWidgets.QLineEdit("0")
+            ith_home_location.setPlaceholderText(f"{char} home position")
+
+            sublayout.addWidget(ith_home_location, 0, idx)
+            home_location.append(ith_home_location)
+        xyzbox.setLayout(sublayout)
+        layout.addWidget(xyzbox, 1, 0, 1, 2)
+
         set_home_button = QtWidgets.QPushButton("Set Home")
         set_home_button.setStyleSheet("""QPushButton {
     font-size: 25px;
@@ -384,11 +400,11 @@ class Page(QtWidgets.QWidget):
 }""")
 
         def set_home_action(_):
-            if len(self._enu_box.array_values) == 3:
-                self.set_home.emit(*self._enu_box.array_values)
+            home_loc = [float(it.text()) for it in home_location]
+            self.set_home.emit(*home_loc)
 
         set_home_button.clicked.connect(set_home_action)
-        layout.addWidget(set_home_button, 1, 0)
+        layout.addWidget(set_home_button, 2, 0, 1, 2)
 
         def toggle_modeset(state):
             self._mode_menu.blockSignals(True)
