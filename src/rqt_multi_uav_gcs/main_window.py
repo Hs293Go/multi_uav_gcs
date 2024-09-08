@@ -253,7 +253,7 @@ class Page(QtWidgets.QWidget):
         refs_layout = QtWidgets.QGridLayout()
 
         self._refs_line_edits = []
-        self._refs_bounds_line_edits = []
+        refs_bounds_line_edits = []
         for idx, it in enumerate(list("xyz") + ["yaw"]):
             if it == "yaw":
                 line_edit = BoundedLineEdit(0.0, (-180, 180))
@@ -289,7 +289,7 @@ class Page(QtWidgets.QWidget):
                     )
                 )
 
-                self._refs_bounds_line_edits.extend(bounds)
+                refs_bounds_line_edits.extend(bounds)
                 refs_layout.addWidget(
                     QtWidgets.QLabel("Min. %s (m)" % it.upper()), 2, 2 * idx, 1, 1
                 )
@@ -304,18 +304,23 @@ class Page(QtWidgets.QWidget):
                 unlock_bounds_checkbox.stateChanged.connect(
                     lambda s: [
                         bnd.setEnabled(s == QtCore.Qt.Checked)
-                        for bnd in self._refs_bounds_line_edits
+                        for bnd in refs_bounds_line_edits
                     ]
                 )
                 refs_layout.addWidget(unlock_bounds_checkbox, 3, 7, 1, 1)
 
-        self._copy_position_button = QtWidgets.QPushButton("Copy current position")
-        self._copy_position_button.clicked.connect(self._copy_position)
-        refs_layout.addWidget(self._copy_position_button, 4, 0, 1, 2)
+        copy_position_button = QtWidgets.QPushButton("Copy current position")
+        copy_position_button.clicked.connect(self._copy_position)
+        refs_layout.addWidget(copy_position_button, 4, 0, 1, 2)
 
-        self._send_refs_button = QtWidgets.QPushButton("Send Reference")
-        self._send_refs_button.clicked.connect(self._send_refs)
-        refs_layout.addWidget(self._send_refs_button, 4, 2, 1, 2)
+        send_refs_button = QtWidgets.QPushButton("Send Reference")
+
+        send_refs_button.clicked.connect(
+            lambda: self.send_refs.emit(
+                *[float(e.text()) for e in self._refs_line_edits]
+            )
+        )
+        refs_layout.addWidget(send_refs_button, 4, 2, 1, 2)
 
         refs_box.setLayout(refs_layout)
         layout.addWidget(refs_box)
@@ -339,10 +344,11 @@ class Page(QtWidgets.QWidget):
             "Disarm" if self._is_armed else "Arm"
         )
         self._set_arming_button_style()
-        self._arming_button.clicked.connect(self._trigger_arming)
+        self._arming_button.clicked.connect(
+            lambda: self.arming.emit(not self._is_armed)
+        )
         layout.addWidget(self._arming_button, 0, 0)
 
-        self._mode_menu = QtWidgets.QComboBox()
         px4_modes = [
             "STABILIZED",
             "ALTCTL",
@@ -383,30 +389,33 @@ class Page(QtWidgets.QWidget):
             "AUTO",
             "ACRO",
         ]
-        self._mode_menu.addItems(px4_modes)
-        self._mode_menu.setStyleSheet("""QComboBox {
+        mode_menu = QtWidgets.QComboBox()
+        mode_menu.addItems(px4_modes)
+        mode_menu.setStyleSheet("""QComboBox {
     font-size: 25px;
     font-weight: bold;
 }""")
-        self._mode_menu.currentIndexChanged.connect(self._set_mode)
-        layout.addWidget(self._mode_menu, 0, 1)
-        self._mode_toggle = QtWidgets.QCheckBox("Use APM Modes")
-        self._mode_toggle.setStyleSheet("""QCheckBox {
+        mode_menu.currentIndexChanged.connect(
+            lambda idx: self.set_mode.emit(mode_menu.itemText(idx))
+        )
+        layout.addWidget(mode_menu, 0, 1)
+        mode_toggle = QtWidgets.QCheckBox("Use APM Modes")
+        mode_toggle.setStyleSheet("""QCheckBox {
     font-size: 25px;
     font-weight: bold;
 }""")
-        layout.addWidget(self._mode_toggle, 0, 2)
+        layout.addWidget(mode_toggle, 0, 2)
 
         def toggle_modeset(state):
-            self._mode_menu.blockSignals(True)
-            self._mode_menu.clear()
+            mode_menu.blockSignals(True)
+            mode_menu.clear()
             if state == QtCore.Qt.Checked:
-                self._mode_menu.addItems(apm_modes)
+                mode_menu.addItems(apm_modes)
             else:
-                self._mode_menu.addItems(px4_modes)
-            self._mode_menu.blockSignals(False)
+                mode_menu.addItems(px4_modes)
+            mode_menu.blockSignals(False)
 
-        self._mode_toggle.stateChanged.connect(toggle_modeset)
+        mode_toggle.stateChanged.connect(toggle_modeset)
 
         layout.addWidget(self.make_home_location_subbox(), 1, 0, 1, 3)
         layout.addWidget(self.make_trajectory_subbox(), 2, 0, 1, 3)
@@ -564,13 +573,6 @@ class Page(QtWidgets.QWidget):
     #
     # These are connected to signals defined in this class
 
-    def _trigger_arming(self):
-        should_arm = not self._is_armed
-        self.arming.emit(should_arm)
-
-    def _set_mode(self, idx):
-        self.set_mode.emit(self._mode_menu.itemText(idx))
-
     def _toggle_odom_topic(self):
         if "odom" not in self._receiver.subs:
             topic = self._odometry_line_edit.text()
@@ -584,11 +586,6 @@ class Page(QtWidgets.QWidget):
             self.update_odom_topic.emit("")
             self._odometry_line_edit.setPlaceholderText("")
             self._odom_toggle_button.setText("Use odometry")
-
-    def _send_refs(self):
-        refs = [float(e.text()) for e in self._refs_line_edits]
-
-        self.send_refs.emit(*refs)
 
     def _copy_position(self):
         values = self._enu_box.array_values
