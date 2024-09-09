@@ -1,3 +1,5 @@
+import json
+
 from python_qt_binding import QtCore, QtWidgets
 
 from rqt_multi_uav_gcs import qnode
@@ -86,6 +88,8 @@ class Page(QtWidgets.QWidget):
     update_odom_topic = QtCore.pyqtSignal(str)
     send_refs = QtCore.pyqtSignal(float, float, float, float)
     set_home = QtCore.pyqtSignal(float, float, float)
+    toggle_trajectory_exec = QtCore.pyqtSignal(bool)
+    load_trajectory_file = QtCore.pyqtSignal(str)
 
     def __init__(self, receiver: qnode.VehicleNode):
         super().__init__()
@@ -106,6 +110,11 @@ class Page(QtWidgets.QWidget):
         rhs_layout = QtWidgets.QVBoxLayout()
         rhs_layout.addWidget(self.make_command_state_groupbox())
         rhs_layout.addWidget(self.make_offboard_control_groupbox())
+        rhs_layout.addItem(
+            QtWidgets.QSpacerItem(
+                0, 0, QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Expanding
+            )
+        )
         rhs_frame.setLayout(rhs_layout)
         layout.addWidget(rhs_frame)
         self.setLayout(layout)
@@ -121,11 +130,14 @@ class Page(QtWidgets.QWidget):
         self._receiver.update_nsats.connect(self.update_nsats)
         self._receiver.update_setpoints.connect(self.update_setpoints)
         self._receiver.update_battery.connect(self.update_battery)
+        self._receiver.update_traj_progress.connect(self.update_traj_progress)
         self.arming.connect(self._receiver.arming)
         self.set_mode.connect(self._receiver.set_mode)
         self.update_odom_topic.connect(self._receiver.update_odom_topic)
         self.send_refs.connect(self._receiver.send_refs)
         self.set_home.connect(self._receiver.set_home)
+        self.toggle_trajectory_exec.connect(self._receiver.toggle_trajectory_exec)
+        self.load_trajectory_file.connect(self._receiver.load_trajectory_file)
 
     # Group Box Definitions
     # ---------------------
@@ -385,32 +397,6 @@ class Page(QtWidgets.QWidget):
 }""")
         layout.addWidget(self._mode_toggle, 0, 2)
 
-        xyzbox = QtWidgets.QGroupBox()
-        sublayout = QtWidgets.QGridLayout()
-
-        home_location = []
-        for idx, char in enumerate("xyz"):
-            ith_home_location = QtWidgets.QLineEdit("0")
-            ith_home_location.setPlaceholderText(f"{char} home position")
-
-            sublayout.addWidget(ith_home_location, 0, idx)
-            home_location.append(ith_home_location)
-        xyzbox.setLayout(sublayout)
-        layout.addWidget(xyzbox, 1, 0, 1, 2)
-
-        set_home_button = QtWidgets.QPushButton("Set Home")
-        set_home_button.setStyleSheet("""QPushButton {
-    font-size: 25px;
-    font-weight: bold;
-}""")
-
-        def set_home_action(_):
-            home_loc = [float(it.text()) for it in home_location]
-            self.set_home.emit(*home_loc)
-
-        set_home_button.clicked.connect(set_home_action)
-        layout.addWidget(set_home_button, 2, 0, 1, 2)
-
         def toggle_modeset(state):
             self._mode_menu.blockSignals(True)
             self._mode_menu.clear()
@@ -422,6 +408,97 @@ class Page(QtWidgets.QWidget):
 
         self._mode_toggle.stateChanged.connect(toggle_modeset)
 
+        layout.addWidget(self.make_home_location_subbox(), 1, 0, 1, 3)
+        layout.addWidget(self.make_trajectory_subbox(), 2, 0, 1, 3)
+        box.setLayout(layout)
+        return box
+
+    def make_home_location_subbox(self):
+        box = QtWidgets.QGroupBox("Home Location")
+        layout = QtWidgets.QHBoxLayout()
+
+        home_location = []
+        for idx, char in enumerate("xyz"):
+            ith_home_location = QtWidgets.QLineEdit("0")
+            ith_home_location.setPlaceholderText(f"{char} home position")
+
+            layout.addWidget(ith_home_location)
+            home_location.append(ith_home_location)
+
+        set_home_button = QtWidgets.QPushButton("Set Home")
+
+        def set_home_action(_):
+            home_loc = [float(it.text()) for it in home_location]
+            self.set_home.emit(*home_loc)
+
+        set_home_button.clicked.connect(set_home_action)
+        layout.addWidget(set_home_button)
+        box.setLayout(layout)
+        return box
+
+    def make_trajectory_subbox(self):
+        box = QtWidgets.QGroupBox("Trajectory Tracking")
+        layout = QtWidgets.QGridLayout()
+        self._toggle_trajectory_button = QtWidgets.QPushButton("Start Trajectory")
+        self._toggle_trajectory_button.setEnabled(False)
+
+        def toggle_trajectory():
+            self.toggle_trajectory_exec.emit(
+                self._toggle_trajectory_button.text().startswith("Start")
+            )
+
+        self._toggle_trajectory_button.clicked.connect(toggle_trajectory)
+        layout.addWidget(self._toggle_trajectory_button, 0, 0)
+        load_trajectory_button = QtWidgets.QPushButton("Load Trajectory File")
+        fd = QtWidgets.QFileDialog()
+
+        self._file_name_line_edit = QtWidgets.QLineEdit()
+
+        def load_trajectory_file(_):
+            file_name, _ = fd.getOpenFileName(
+                caption="Load Trajectory File",
+                filter="Trajectory Specification (*.json)",
+            )
+            try:
+                with open(file_name, "r", encoding="utf-8") as fp:
+                    trajectory = json.load(fp)
+                    position = trajectory["trajectory"][0]["position"]
+                    if len(position) != 3:
+                        return
+
+                    for value, line_edit in zip(position, self._refs_line_edits):
+                        if not isinstance(value, float):
+                            return
+
+                        line_edit.setText(str(value))
+            except (
+                FileNotFoundError,
+                json.JSONDecodeError,
+                KeyError,
+                IndexError,
+                ValueError,
+            ):
+                return
+            self._file_name_line_edit.setText(file_name)
+
+        load_trajectory_button.clicked.connect(load_trajectory_file)
+
+        read_trajectory_button = QtWidgets.QPushButton("Send Trajectory")
+        read_trajectory_button.setEnabled(False)
+        self._file_name_line_edit.textChanged.connect(
+            lambda str: read_trajectory_button.setEnabled(bool(str))
+        )
+        read_trajectory_button.clicked.connect(
+            lambda _: self.load_trajectory_file.emit(self._file_name_line_edit.text())
+        )
+
+        self._trajectory_progress = QtWidgets.QProgressBar()
+        self._trajectory_progress.setEnabled(False)
+        layout.addWidget(load_trajectory_button, 0, 1)
+        layout.addWidget(self._file_name_line_edit, 0, 2)
+        layout.addWidget(read_trajectory_button, 0, 3)
+        layout.addWidget(QtWidgets.QLabel("Progress along trajectory"), 1, 0)
+        layout.addWidget(self._trajectory_progress, 1, 1, 1, 3)
         box.setLayout(layout)
         return box
 
@@ -466,6 +543,21 @@ class Page(QtWidgets.QWidget):
     def update_setpoints(self, index, *values):
         self._setpoints.setCurrentIndex(index)
         self._sp_boxes[index].display(*values)
+
+    def update_traj_progress(self, progress):
+        # progress < 0 signals no trajectory loaded
+        self._trajectory_progress.setDisabled(progress < 0)
+        self._toggle_trajectory_button.setDisabled(progress < 0)
+
+        self._trajectory_progress.setValue(min(max(progress, 0), 100))
+        self._toggle_trajectory_button.setText(
+            "%s trajectory" % ("Start" if progress <= 0 else "Stop")
+        )
+        self._toggle_trajectory_button.setStyleSheet("""QPushButton {
+    color : %s;
+    background-color: %s;
+    font-weight: bold;
+}""" % (("black", "white") if progress <= 0 else ("white", "red")))
 
     # Private Slot Definitions
     # ------------------------

@@ -4,12 +4,13 @@ import rospy
 from fsc_autopilot_msgs.msg import PositionControllerReference
 from geometry_msgs.msg import PoseStamped, TwistStamped
 from mavros_msgs.msg import AttitudeTarget, State
-from mavros_msgs.srv import CommandBool, CommandInt, SetMode
+from mavros_msgs.srv import CommandBool, CommandInt, FileRead, SetMode
 from nav_msgs.msg import Odometry
 from python_qt_binding import QtCore
 from scipy.spatial.transform import Rotation
 from sensor_msgs.msg import BatteryState, Imu, NavSatFix
-from std_msgs.msg import UInt32
+from std_msgs.msg import Int8, UInt32
+from std_srvs.srv import Trigger
 
 
 class VehicleNode(QtCore.QObject):
@@ -21,6 +22,7 @@ class VehicleNode(QtCore.QObject):
     update_state = QtCore.pyqtSignal(bool, bool, str)
     update_nsats = QtCore.pyqtSignal(int)
     update_setpoints = QtCore.pyqtSignal(int, float, float, float, float)
+    update_traj_progress = QtCore.pyqtSignal(int)
 
     def __init__(self, prefix="", odom_topic=""):
         super().__init__()
@@ -36,6 +38,16 @@ class VehicleNode(QtCore.QObject):
         self._set_home_client = rospy.ServiceProxy(
             "%s/state_estimator/override_set_home" % self._prefix, CommandInt
         )
+        self._start_exectraj_client = rospy.ServiceProxy(
+            "%s/trajectory_publisher/start" % self._prefix, Trigger
+        )
+        self._stop_exectraj_client = rospy.ServiceProxy(
+            "%s/trajectory_publisher/stop" % self._prefix, Trigger
+        )
+        self._load_trajectory_file_client = rospy.ServiceProxy(
+            "%s/trajectory_publisher/read_trajectory_file" % self._prefix, FileRead
+        )
+
         self._subs = {
             "imu": rospy.Subscriber(
                 "%s/mavros/imu/data" % self._prefix, Imu, self._imu_cb, queue_size=1
@@ -65,6 +77,12 @@ class VehicleNode(QtCore.QObject):
                 "%s/mavros/battery" % self._prefix,
                 BatteryState,
                 self._battery_cb,
+                queue_size=1,
+            ),
+            "trajectory_prog": rospy.Subscriber(
+                "%s/trajectory_publisher/progress" % self._prefix,
+                Int8,
+                self._trajectory_cb,
                 queue_size=1,
             ),
         }
@@ -140,6 +158,15 @@ class VehicleNode(QtCore.QObject):
     def set_home(self, home_x, home_y, home_z):
         self._set_home_client(param1=home_x, param2=home_y, param3=home_z)
 
+    def toggle_trajectory_exec(self, value):
+        if value:
+            self._start_exectraj_client.call()
+        else:
+            self._stop_exectraj_client.call()
+
+    def load_trajectory_file(self, file_path):
+        self._load_trajectory_file_client.call(file_path=file_path)
+
     def _imu_cb(self, msg):
         angles = Rotation.from_quat(
             [getattr(msg.orientation, it) for it in "xyzw"]
@@ -193,6 +220,9 @@ class VehicleNode(QtCore.QObject):
 
     def _nsat_cb(self, msg):
         self.update_nsats.emit(msg.data)
+
+    def _trajectory_cb(self, msg):
+        self.update_traj_progress.emit(msg.data)
 
     def shutdown(self):
         for it in self._subs.values():
