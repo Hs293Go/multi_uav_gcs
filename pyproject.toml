@@ -1,0 +1,9 @@
+[project]
+authors = [{ name = "H S Helson Go", email = "hei.go@mail.utoronto.ca" }]
+name = "multi_uav_gcs"
+version = "0.0.1"
+description = "Ground Control Station for multiple UAVs based on rqt"
+license = { text = "MIT" }
+
+[tool.isort]
+profile = "black"
