@@ -1,6 +1,4 @@
 from PyQt5 import (
-    Qt,
-    QtCore,
     QtDBus,
     QtDesigner,
     QtGui,
@@ -15,3 +13,5 @@ from PyQt5 import (
     QtWidgets,
     QtXml,
 )
+
+from . import QtCore
