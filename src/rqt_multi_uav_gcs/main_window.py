@@ -40,12 +40,35 @@ class MainWindow(QtWidgets.QWidget):
 }""")
         self._tabs.setTabsClosable(True)
         self._tabs.tabCloseRequested.connect(self.remove_tab)
+        self._pages = []
+        self._trajectory_progress_all = {}
+        team_mgmt_group_box = self.make_team_mgmt_box()
 
         self._node = qnode.QNode()
         for tab_title, tab_receiver in self._node.vehicles.items():
             self.make_tab(tab_title, tab_receiver)
         layout.addWidget(self._tabs, 1, 0, 1, 4)
+        layout.addWidget(team_mgmt_group_box)
+
         self.setLayout(layout)
+
+    def make_team_mgmt_box(self):
+        team_mgmt_group_box = QtWidgets.QGroupBox("Team Management")
+        layout = QtWidgets.QGridLayout()
+        self.toggle_all_trajectory_button = QtWidgets.QPushButton(
+            "Start Trajectory for all"
+        )
+
+        def _toggle_all_trajectory(_):
+            for it in self._pages:
+                it.toggle_trajectory_exec.emit(
+                    self.toggle_all_trajectory_button.text().startswith("Start")
+                )
+
+        self.toggle_all_trajectory_button.clicked.connect(_toggle_all_trajectory)
+        layout.addWidget(self.toggle_all_trajectory_button)
+        team_mgmt_group_box.setLayout(layout)
+        return team_mgmt_group_box
 
     def make_tab(self, name, receiver):
         page = Page(receiver)
@@ -55,6 +78,10 @@ class MainWindow(QtWidgets.QWidget):
         else:
             pretty_title = "Multi UAV: %s" % name
         self._tabs.addTab(page, pretty_title)
+        page.update_traj_progress_to_mw.connect(
+            lambda progress: self.update_traj_progress(progress, pretty_title)
+        )
+        self._pages.append(page)
 
     def remove_tab(self, idx):
         pretty_title = self._tabs.tabText(idx)
@@ -81,6 +108,22 @@ class MainWindow(QtWidgets.QWidget):
         for it in list(self._node.vehicles):
             self._node.vehicles.pop(it).shutdown()
 
+    def update_traj_progress(self, progress, title):
+        self._trajectory_progress_all[title] = progress
+        prog_all = self._trajectory_progress_all.values()
+        all_enabled = all(it < 0 for it in prog_all)
+        self.toggle_all_trajectory_button.setDisabled(all_enabled)
+
+        all_startable = all(it <= 0 for it in prog_all)
+        self.toggle_all_trajectory_button.setText(
+            "%s trajectory" % ("Start" if all_startable else "Stop")
+        )
+        self.toggle_all_trajectory_button.setStyleSheet("""QPushButton {
+    color : %s;
+    background-color: %s;
+    font-weight: bold;
+}""" % (("black", "white") if all_startable else ("white", "red")))
+
 
 class Page(QtWidgets.QWidget):
     arming = QtCore.pyqtSignal(bool)
@@ -90,6 +133,7 @@ class Page(QtWidgets.QWidget):
     set_home = QtCore.pyqtSignal(float, float, float)
     toggle_trajectory_exec = QtCore.pyqtSignal(bool)
     load_trajectory_file = QtCore.pyqtSignal(str)
+    update_traj_progress_to_mw = QtCore.pyqtSignal(float)
 
     def __init__(self, receiver: qnode.VehicleNode):
         super().__init__()
@@ -567,6 +611,7 @@ class Page(QtWidgets.QWidget):
     background-color: %s;
     font-weight: bold;
 }""" % (("black", "white") if progress <= 0 else ("white", "red")))
+        self.update_traj_progress_to_mw.emit(progress)
 
     # Private Slot Definitions
     # ------------------------
